@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Large CSV Compressor</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <style>
+    :root {
+      --bg: #f6f7f9;
+      --card: #ffffff;
+      --text: #1f2933;
+      --muted: #6b7280;
+      --primary: #005eb8;
+      --primary-dark: #004b93;
+      --border: #d9dee7;
+      --success: #15803d;
+      --warning: #b45309;
+      --danger: #b91c1c;
+    }
+
+    body {
+      margin: 0;
+      font-family: Arial, Helvetica, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+
+    .wrap {
+      max-width: 860px;
+      margin: 40px auto;
+      padding: 0 20px;
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      box-shadow: 0 12px 30px rgba(15, 23, 42, 0.08);
+      padding: 28px;
+    }
+
+    h1 {
+      margin: 0 0 8px;
+      font-size: 30px;
+      letter-spacing: -0.02em;
+    }
+
+    .subtitle {
+      color: var(--muted);
+      margin: 0 0 24px;
+      line-height: 1.5;
+    }
+
+    .drop-zone {
+      border: 2px dashed var(--border);
+      border-radius: 16px;
+      padding: 28px;
+      text-align: center;
+      background: #fbfcfe;
+      transition: 0.2s ease;
+      margin-bottom: 18px;
+    }
+
+    .drop-zone.dragover {
+      border-color: var(--primary);
+      background: #eef6ff;
+    }
+
+    input[type="file"] {
+      display: none;
+    }
+
+    .file-label {
+      display: inline-block;
+      background: #eef2f7;
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 12px 18px;
+      border-radius: 999px;
+      cursor: pointer;
+      font-weight: 700;
+    }
+
+    .file-label:hover {
+      background: #e5eaf1;
+    }
+
+    .button-row {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-top: 18px;
+    }
+
+    button {
+      border: none;
+      border-radius: 999px;
+      padding: 13px 20px;
+      font-weight: 700;
+      cursor: pointer;
+      font-size: 15px;
+    }
+
+    .primary {
+      background: var(--primary);
+      color: white;
+    }
+
+    .primary:hover {
+      background: var(--primary-dark);
+    }
+
+    .secondary {
+      background: #eef2f7;
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .info-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 20px;
+    }
+
+    .info-box {
+      background: #f9fafb;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 14px;
+    }
+
+    .info-box span {
+      display: block;
+      color: var(--muted);
+      font-size: 13px;
+      margin-bottom: 5px;
+    }
+
+    .info-box strong {
+      font-size: 18px;
+    }
+
+    .progress-wrap {
+      margin-top: 22px;
+    }
+
+    .progress-shell {
+      width: 100%;
+      height: 14px;
+      background: #e5e7eb;
+      border-radius: 999px;
+      overflow: hidden;
+    }
+
+    .progress-bar {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #005eb8, #38bdf8);
+      transition: width 0.2s ease;
+    }
+
+    .status {
+      margin-top: 14px;
+      font-size: 14px;
+      color: var(--muted);
+      line-height: 1.5;
+      white-space: pre-line;
+    }
+
+    .success {
+      color: var(--success);
+      font-weight: 700;
+    }
+
+    .warning {
+      color: var(--warning);
+      font-weight: 700;
+    }
+
+    .danger {
+      color: var(--danger);
+      font-weight: 700;
+    }
+
+    .note {
+      margin-top: 24px;
+      background: #fff7ed;
+      border: 1px solid #fed7aa;
+      border-radius: 14px;
+      padding: 14px;
+      color: #7c2d12;
+      line-height: 1.5;
+      font-size: 14px;
+    }
+
+    @media (max-width: 640px) {
+      .info-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .card {
+        padding: 20px;
+      }
+
+      h1 {
+        font-size: 24px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="wrap">
+    <div class="card">
+      <h1>Large CSV Compressor</h1>
+      <p class="subtitle">
+        Compress a large CSV into a lossless <strong>.csv.gz</strong> file directly in your browser.
+        Your data stays local on your machine.
+      </p>
+
+      <div id="dropZone" class="drop-zone">
+        <p><strong>Select or drag in your CSV file</strong></p>
+        <p class="subtitle">Recommended for large CSV files up to several GB, subject to browser and device limits.</p>
+
+        <label class="file-label" for="fileInput">Choose CSV file</label>
+        <input id="fileInput" type="file" accept=".csv,text/csv,.txt" />
+      </div>
+
+      <div class="button-row">
+        <button id="compressBtn" class="primary" disabled>Compress to .csv.gz</button>
+        <button id="resetBtn" class="secondary">Reset</button>
+      </div>
+
+      <div class="info-grid">
+        <div class="info-box">
+          <span>Selected file</span>
+          <strong id="fileName">None</strong>
+        </div>
+        <div class="info-box">
+          <span>Original size</span>
+          <strong id="originalSize">-</strong>
+        </div>
+        <div class="info-box">
+          <span>Compressed size</span>
+          <strong id="compressedSize">-</strong>
+        </div>
+        <div class="info-box">
+          <span>Compression result</span>
+          <strong id="compressionResult">-</strong>
+        </div>
+      </div>
+
+      <div class="progress-wrap">
+        <div class="progress-shell">
+          <div id="progressBar" class="progress-bar"></div>
+        </div>
+        <div id="status" class="status">Select a file to begin.</div>
+      </div>
+
+      <div class="note">
+        <strong>Important:</strong> This is lossless compression, so all data is preserved. However,
+        it cannot guarantee the final file will be below 512MB. If the compressed file is still too large,
+        the next best approach is to split the CSV into multiple compressed parts or provide a sample file
+        for tool-building.
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const fileInput = document.getElementById("fileInput");
+    const dropZone = document.getElementById("dropZone");
+    const compressBtn = document.getElementById("compressBtn");
+    const resetBtn = document.getElementById("resetBtn");
+
+    const fileNameEl = document.getElementById("fileName");
+    const originalSizeEl = document.getElementById("originalSize");
+    const compressedSizeEl = document.getElementById("compressedSize");
+    const compressionResultEl = document.getElementById("compressionResult");
+    const statusEl = document.getElementById("status");
+    const progressBar = document.getElementById("progressBar");
+
+    let selectedFile = null;
+
+    function formatBytes(bytes) {
+      if (!Number.isFinite(bytes)) return "-";
+      const units = ["B", "KB", "MB", "GB", "TB"];
+      let size = bytes;
+      let unitIndex = 0;
+
+      while (size >= 1024 && unitIndex < units.length - 1) {
+        size /= 1024;
+        unitIndex++;
+      }
+
+      return `${size.toFixed(size >= 100 ? 0 : size >= 10 ? 1 : 2)} ${units[unitIndex]}`;
+    }
+
+    function setStatus(message, className = "") {
+      statusEl.className = "status " + className;
+      statusEl.textContent = message;
+    }
+
+    function setProgress(percent) {
+      const safePercent = Math.max(0, Math.min(100, percent));
+      progressBar.style.width = safePercent + "%";
+    }
+
+    function reset() {
+      selectedFile = null;
+      fileInput.value = "";
+      fileNameEl.textContent = "None";
+      originalSizeEl.textContent = "-";
+      compressedSizeEl.textContent = "-";
+      compressionResultEl.textContent = "-";
+      compressBtn.disabled = true;
+      setProgress(0);
+      setStatus("Select a file to begin.");
+    }
+
+    function selectFile(file) {
+      if (!file) return;
+
+      selectedFile = file;
+      fileNameEl.textContent = file.name;
+      originalSizeEl.textContent = formatBytes(file.size);
+      compressedSizeEl.textContent = "-";
+      compressionResultEl.textContent = "-";
+      compressBtn.disabled = false;
+      setProgress(0);
+
+      setStatus(
+        `Ready to compress.\nFile: ${file.name}\nOriginal size: ${formatBytes(file.size)}`
+      );
+    }
+
+    fileInput.addEventListener("change", (event) => {
+      selectFile(event.target.files[0]);
+    });
+
+    dropZone.addEventListener("dragover", (event) => {
+      event.preventDefault();
+      dropZone.classList.add("dragover");
+    });
+
+    dropZone.addEventListener("dragleave", () => {
+      dropZone.classList.remove("dragover");
+    });
+
+    dropZone.addEventListener("drop", (event) => {
+      event.preventDefault();
+      dropZone.classList.remove("dragover");
+
+      const file = event.dataTransfer.files[0];
+      selectFile(file);
+    });
+
+    resetBtn.addEventListener("click", reset);
+
+    async function compressWithFileSystemAccess(file) {
+      const suggestedName = file.name.endsWith(".csv")
+        ? file.name.replace(/\.csv$/i, ".csv.gz")
+        : file.name + ".gz";
+
+      const handle = await window.showSaveFilePicker({
+        suggestedName,
+        types: [
+          {
+            description: "Gzip compressed CSV",
+            accept: {
+              "application/gzip": [".gz"]
+            }
+          }
+        ]
+      });
+
+      const writable = await handle.createWritable();
+
+      let compressedBytes = 0;
+
+      const countingWritable = new WritableStream({
+        async write(chunk) {
+          compressedBytes += chunk.byteLength;
+          await writable.write(chunk);
+
+          // This is not exact input progress, but gives visible activity.
+          const roughProgress = Math.min(
+            98,
+            Math.round((compressedBytes / Math.max(file.size, 1)) * 100)
+          );
+          setProgress(roughProgress);
+          setStatus(
+            `Compressing and writing to disk...\nCompressed so far: ${formatBytes(compressedBytes)}`
+          );
+        },
+        async close() {
+          await writable.close();
+        },
+        async abort(reason) {
+          await writable.abort(reason);
+        }
+      });
+
+      await file
+        .stream()
+        .pipeThrough(new CompressionStream("gzip"))
+        .pipeTo(countingWritable);
+
+      return compressedBytes;
+    }
+
+    async function compressWithBlobFallback(file) {
+      setStatus(
+        "Your browser does not support direct save streaming.\nUsing fallback mode. This may use more memory for very large files.",
+        "warning"
+      );
+
+      const compressedStream = file
+        .stream()
+        .pipeThrough(new CompressionStream("gzip"));
+
+      const reader = compressedStream.getReader();
+      const chunks = [];
+      let compressedBytes = 0;
+
+      while (true) {
+        const { done, value } = await reader.read();
+
+        if (done) break;
+
+        chunks.push(value);
+        compressedBytes += value.byteLength;
+
+        const roughProgress = Math.min(
+          98,
+          Math.round((compressedBytes / Math.max(file.size, 1)) * 100)
+        );
+
+        setProgress(roughProgress);
+        setStatus(
+          `Compressing...\nCompressed so far: ${formatBytes(compressedBytes)}`
+        );
+      }
+
+      const blob = new Blob(chunks, { type: "application/gzip" });
+      const url = URL.createObjectURL(blob);
+
+      const outputName = file.name.endsWith(".csv")
+        ? file.name.replace(/\.csv$/i, ".csv.gz")
+        : file.name + ".gz";
+
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = outputName;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+
+      URL.revokeObjectURL(url);
+
+      return compressedBytes;
+    }
+
+    compressBtn.addEventListener("click", async () => {
+      if (!selectedFile) return;
+
+      if (!("CompressionStream" in window)) {
+        setStatus(
+          "This browser does not support CompressionStream. Please use a recent version of Microsoft Edge, Chrome, Firefox, or Safari.",
+          "danger"
+        );
+        return;
+      }
+
+      compressBtn.disabled = true;
+      setProgress(1);
+      compressedSizeEl.textContent = "-";
+      compressionResultEl.textContent = "-";
+
+      try {
+        setStatus("Starting compression...");
+
+        let compressedBytes;
+
+        if ("showSaveFilePicker" in window) {
+          compressedBytes = await compressWithFileSystemAccess(selectedFile);
+        } else {
+          compressedBytes = await compressWithBlobFallback(selectedFile);
+        }
+
+        const ratio = compressedBytes / selectedFile.size;
+        const reduction = (1 - ratio) * 100;
+        const targetBytes = 512 * 1024 * 1024;
+
+        compressedSizeEl.textContent = formatBytes(compressedBytes);
+
+        if (compressedBytes <= targetBytes) {
+          compressionResultEl.textContent = "Under 512MB";
+          compressionResultEl.style.color = "var(--success)";
+          setStatus(
+            `Done.\nCompressed size: ${formatBytes(compressedBytes)}\nReduction: ${reduction.toFixed(1)}%\nResult is under 512MB.`,
+            "success"
+          );
+        } else {
+          compressionResultEl.textContent = "Still over 512MB";
+          compressionResultEl.style.color = "var(--warning)";
+          setStatus(
+            `Done, but the compressed file is still over 512MB.\nCompressed size: ${formatBytes(compressedBytes)}\nReduction: ${reduction.toFixed(1)}%\nYou may need to split the source CSV or provide a representative sample.`,
+            "warning"
+          );
+        }
+
+        setProgress(100);
+      } catch (error) {
+        console.error(error);
+        setStatus(
+          "Compression failed or was cancelled.\n" + (error && error.message ? error.message : String(error)),
+          "danger"
+        );
+      } finally {
+        compressBtn.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>
