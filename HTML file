@@ -1,0 +1,104 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><title>2027 Insurer Engagement Planner</title>
+<style>
+body{font:13px Segoe UI,Arial;margin:14px;color:#222}h1{font-size:20px;margin:0 0 8px}
+button,select{padding:4px 9px;margin:2px;cursor:pointer}.tabs button.on{background:#5b2c83;color:#fff}
+table{border-collapse:collapse;width:100%}th,td{border:1px solid #ddd;padding:3px;vertical-align:top}th{background:#f1ecf6;position:sticky;top:0}
+textarea{width:170px;height:48px;font-size:12px}input[type=text]{width:120px}.clash{background:#ffe0e0}.small{font-size:11px;color:#666}
+details{margin:8px 0;padding:6px;background:#faf7fc;border:1px solid #e3d9ee}#people label{display:inline-block;width:250px;margin:2px}
+.chip{display:inline-block;margin:1px;padding:1px 5px;border-radius:8px;color:#fff;font-size:11px}
+.K{background:#5b2c83}.E{background:#c0392b}.Q{background:#2471a3}.T{background:#117a65}.M{background:#999}
+.tl td{height:34px;min-width:78px;font-size:11px}
+</style></head><body>
+<h1>2027 Insurer Engagement Planner</h1>
+<div class="small">Edit anything. Changes save automatically in this browser. Use Export to share. Red rows = same ME person booked on the same day for two insurers.</div>
+<details open><summary><b>Key people (type names once; they auto-populate WTW attendees)</b></summary><div id="people"></div>
+<button onclick="repop()">Re-populate all attendees from people list</button></details>
+<div class="tabs"><button id="t1" class="on" onclick="tab(1)">Meeting table</button><button id="t2" onclick="tab(2)">Year timeline</button>
+<select id="fi" onchange="draw()"></select>
+<button onclick="addM()">+ Add meeting</button><button onclick="csv()">Export CSV</button><button onclick="saveJ()">Save JSON</button>
+<input type="file" id="lf" accept=".json" onchange="loadJ(this)"><button onclick="if(confirm('Reset to suggested schedule?')){localStorage.removeItem('mep27');location.reload()}">Reset</button></div>
+<div id="v1"></div><div id="v2" style="display:none"></div>
+<script>
+const MON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const TN={K:'Kickoff',E:'Exec review',Q:'QBR',T:'Trading review',M:'Monthly'};
+const PF=[['hob','Head of Broking','Ollie Moore'],['tech','Head of Technical Broking','Stephen MacDermott'],['exec','Exec sponsor (WTW)',''],['pd1','Placement Director 1','Ange Vella'],['pd2','Placement Director 2','Michael Doyle'],['Ned','ME: Ned','Ned Clear'],['Tom','ME: Tom','Tom'],['Edward','ME: Edward','Edward'],['Property','Property specialist',''],['Casualty/Liability','Casualty/Liability specialist',''],['Finex','Finex specialist',''],['Construction','Construction specialist','David Williams'],['Workers Compensation','Workers Comp specialist','Kosta Savidakis'],['Automobile','Motor specialist',''],['Accident & Health','A&H specialist',''],['nz1','NZ support 1','Alanna Lowe'],['nz2','NZ support 2','Renee Boyd']];
+// name,country,ME lead,ME support (2027 allocation),premium peak months (2023-25 invoice data),specialists,monthly?,extras,2026 insurer attendees
+const INS=[
+['AIG','AU+NZ','Ned','Tom',[7,12],['Property','Finex'],0,[],'Allan Coombes; Ryan Spettigue'],
+['Allianz','AU','Ned','Edward',[3,6,7],['Workers Compensation'],1,[],'John Whealans; Mark Sutton; Tralia Tsang; Declan Cox'],
+['Arch','AU','Ned','Edward',[6,10],['Finex','Property'],1,[],''],
+['AXA XL','AU','Ned','Tom',[6,11,12],['Casualty/Liability'],0,[],'Stephen Nguyen; Shaun Higgerson; Natasha Wagner'],
+['CGU','AU','Ned','Tom',[7,10,11],['Workers Compensation'],1,[],'Scott Gangell; Brent Farrow'],
+['NZI','NZ','Ned','Tom',[7,11],['Automobile','Property'],0,[],''],
+['Chubb','AU+NZ','Ned','Edward',[7,10,11],['Property'],1,[],'Ben Howell; Demetra Day; Matthew Dick'],
+['HDI / HDI Global','AU','Ned','Edward',[6,7,12],['Property','Casualty/Liability','Construction'],1,[],''],
+['QBE','AU+NZ','Ned','Edward',[7,11],['Property','Workers Compensation'],0,[],"Anthony D'Oca; John Zeeman; Ryan Hales"],
+['Richard Oliver','AU','Tom','Edward',[11,12],['Accident & Health'],0,[],''],
+['SCOR','AU','Ned','Tom',[5,12],['Property','Construction'],0,['Matt Nash'],'Amy Fu; Mark Sbaglia; Steve Najdovski; Byung Wan Min'],
+['Vero','AU+NZ','Ned','Tom',[7,9],['Property','Finex'],1,[],'Chris Kokalevski; Andrew Sweeney; Simon Kenny'],
+['Vero Liability','NZ','Ned','',[9],[],0,['nz1','nz2'],''],
+['Zurich','AU','Ned','Edward',[5,12],['Property','Automobile'],1,[],'Melissa Starfield'],
+['Ando Insurance','NZ','Ned','Tom',[7,9],['Automobile','Property'],0,['nz1','nz2'],'']];
+const IB={};INS.forEach(i=>IB[i[0]]=i);
+const SEED=[['AIG','03-08','K'],['AIG','08-23','T'],['Allianz','03-22','K'],['Allianz','08-16','T'],['Arch','04-12','KQ'],['Arch','07-12','Q'],
+['AXA XL','02-08','KEQ'],['AXA XL','07-19','Q'],['AXA XL','12-06','Q'],['CGU','03-08','KE'],['CGU','08-09','T'],['CGU','11-08','E'],
+['NZI','02-01','KEQ'],['NZI','08-02','EQ'],['Chubb','02-22','KEQ'],['Chubb','08-30','EQ'],['Chubb','12-13','Q'],
+['HDI / HDI Global','03-15','KEQ'],['HDI / HDI Global','05-24','Q'],['HDI / HDI Global','09-06','Q'],['HDI / HDI Global','11-22','Q'],
+['QBE','01-25','K'],['QBE','09-13','T'],['Richard Oliver','02-01','KQ'],['Richard Oliver','05-17','Q'],['Richard Oliver','09-20','Q'],['Richard Oliver','12-20','Q'],
+['SCOR','02-08','K'],['SCOR','09-27','T'],['Vero','03-22','KEQ'],['Vero','06-14','Q'],['Vero','10-11','EQ'],['Vero','12-08','Q'],
+['Vero Liability','03-22','KQ'],['Vero Liability','06-14','Q'],['Vero Liability','10-11','Q'],['Vero Liability','12-08','Q'],
+['Zurich','02-15','KQ'],['Zurich','06-21','Q'],['Zurich','10-04','Q'],['Zurich','11-29','Q'],['Ando Insurance','03-01','KQ'],['Ando Insurance','10-18','Q']];
+let S=JSON.parse(localStorage.getItem('mep27')||'null');
+if(!S){S={people:{},ms:[]};PF.forEach(p=>S.people[p[0]]=p[2]);let n=1;
+ SEED.forEach(s=>S.ms.push({id:n++,ins:s[0],date:'2027-'+s[1],types:s[2],notes:''}));
+ INS.filter(i=>i[6]).forEach(i=>{for(let m=1;m<=12;m++){const d=new Date(Date.UTC(2027,m-1,1));const day=1+((3-d.getUTCDay()+7)%7)+14;
+  const ds='2027-'+String(m).padStart(2,'0')+'-'+String(day).padStart(2,'0');
+  const ex=S.ms.find(x=>x.ins==i[0]&&+x.date.slice(5,7)==m);
+  if(ex){if(!ex.types.includes('M'))ex.types+='M'}else S.ms.push({id:n++,ins:i[0],date:ds,types:'M',notes:''})}});}
+const save=()=>localStorage.setItem('mep27',JSON.stringify(S));
+const esc=s=>String(s==null?'':s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');
+const D=s=>new Date(s+'T00:00:00Z'),ds=d=>d.toISOString().slice(0,10);
+function planStart(m){const d=D(m.date);let best=null;for(const t of m.types){const x=new Date(d);
+ if(t=='K')x.setUTCMonth(x.getUTCMonth()-2);else if(t=='E')x.setUTCMonth(x.getUTCMonth()-3);else if(t=='Q'||t=='T')x.setUTCMonth(x.getUTCMonth()-1);else x.setUTCDate(x.getUTCDate()-7);
+ if(!best||x<best)best=x}return best?ds(best):''}
+function why(m){const i=IB[m.ins];if(!i)return'';const mo=+m.date.slice(5,7);let b=null,bd=99;
+ i[4].forEach(p=>{const dist=(mo-p+12)%12;if(dist>=1&&dist<bd){bd=dist;b=p}});
+ let t=m.types=='M'?'Monthly relationship cadence. ':'';if(b)t+='Follows '+MON[b-1]+' premium peak ('+bd+' mo earlier).';
+ if(m.types.includes('K'))t='Kickoff per 2027 schedule. '+t;return t}
+function wtw(m){const P=S.people,i=IB[m.ins];if(!i)return'';const a=[],add=k=>{const v=P[k]!==undefined?P[k]:k;if(v&&!a.includes(v))a.push(v)};
+ if(m.types.includes('K')){add('hob');add('tech');i[5].forEach(add)}if(m.types.includes('E')){add('hob');add('exec')}
+ if(m.types.includes('Q')){add('pd1');add('pd2')}if(m.types.includes('T'))add('tech');add(i[2]);if(i[3])add(i[3]);i[7].forEach(add);return a.join('; ')}
+function tab(n){v1.style.display=n==1?'':'none';v2.style.display=n==2?'':'none';t1.className=n==1?'on':'';t2.className=n==2?'on':''}
+function draw(){const f=fi.value;let ms=S.ms.filter(m=>!f||m.ins==f).sort((a,b)=>a.date.localeCompare(b.date)||a.ins.localeCompare(b.ins));
+ const day={};S.ms.forEach(m=>{const i=IB[m.ins];if(i&&i[2]){const k=i[2]+m.date;(day[k]=day[k]||new Set()).add(m.ins)}});
+ let h='<table><tr><th>Date</th><th>Insurer</th><th>Meeting type(s)</th><th>Start planning</th><th>ME lead / support</th><th>Why this date</th><th>WTW attendees</th><th>Insurer attendees</th><th>Notes</th><th></th></tr>';
+ ms.forEach(m=>{const i=IB[m.ins]||[],cl=i[2]&&day[i[2]+m.date]&&day[i[2]+m.date].size>1&&!(['Vero','Vero Liability'].includes(m.ins)&&day[i[2]+m.date].size==2);
+  h+='<tr class="'+(cl?'clash':'')+'"><td><button onclick="mv('+m.id+',-7)">&#9664;</button><input type="date" value="'+m.date+'" onchange="up('+m.id+',\'date\',this.value)"><button onclick="mv('+m.id+',7)">&#9654;</button><div class="small">'+D(m.date).toUTCString().slice(0,3)+(cl?' – ME clash':'')+'</div></td>'
+  +'<td><select onchange="up('+m.id+',\'ins\',this.value)">'+INS.map(x=>'<option'+(x[0]==m.ins?' selected':'')+'>'+esc(x[0])+'</option>').join('')+'</select></td><td>'
+  +Object.keys(TN).map(t=>'<label><input type="checkbox" '+(m.types.includes(t)?'checked':'')+' onchange="tg('+m.id+',\''+t+'\',this.checked)">'+TN[t]+'</label><br>').join('')+'</td>'
+  +'<td>'+planStart(m)+'</td><td>'+esc(i[2])+(i[3]?' / '+esc(i[3]):'')+'</td><td class="small">'+esc(why(m))+'</td>'
+  +'<td><textarea onchange="up('+m.id+',\'wtwO\',this.value)">'+esc(m.wtwO!==undefined?m.wtwO:wtw(m))+'</textarea></td>'
+  +'<td><textarea onchange="up('+m.id+',\'insO\',this.value)">'+esc(m.insO!==undefined?m.insO:i[8]||'')+'</textarea></td>'
+  +'<td><textarea onchange="up('+m.id+',\'notes\',this.value)">'+esc(m.notes)+'</textarea></td><td><button onclick="del('+m.id+')">&#10005;</button></td></tr>'});
+ v1.innerHTML=h+'</table>';
+ let t='<table class="tl"><tr><th>Insurer</th>'+MON.map(x=>'<th>'+x+'</th>').join('')+'</tr>';
+ INS.forEach(i=>{t+='<tr><td><b>'+esc(i[0])+'</b></td>';for(let mo=1;mo<=12;mo++){t+='<td'+(i[4].includes(mo)?' style="background:#fff3d6" title="Premium peak month"':'')+'>';
+  S.ms.filter(m=>m.ins==i[0]&&+m.date.slice(5,7)==mo&&m.types!='M').sort((a,b)=>a.date.localeCompare(b.date)).forEach(m=>{t+=m.types.split('').map(x=>'<span class="chip '+x+'">'+x+'</span>').join('')+'<span class="small">'+m.date.slice(8)+'</span> '});
+  if(S.ms.some(m=>m.ins==i[0]&&+m.date.slice(5,7)==mo&&m.types.includes('M')))t+='<span class="chip M">M</span>';t+='</td>'}t+='</tr>'});
+ v2.innerHTML='<p class="small">Yellow = premium peak months. K=Kickoff, E=Exec, Q=QBR, T=Trading review, M=Monthly. Day of month shown.</p>'+t+'</table>'}
+function up(id,k,v){const m=S.ms.find(x=>x.id==id);m[k]=v;save();draw()}
+function mv(id,d){const m=S.ms.find(x=>x.id==id),x=D(m.date);x.setUTCDate(x.getUTCDate()+d);up(id,'date',ds(x))}
+function tg(id,t,on){const m=S.ms.find(x=>x.id==id);m.types=Object.keys(TN).filter(k=>k==t?on:m.types.includes(k)).join('');delete m.wtwO;save();draw()}
+function del(id){S.ms=S.ms.filter(m=>m.id!=id);save();draw()}
+function addM(){S.ms.push({id:Date.now(),ins:fi.value||INS[0][0],date:'2027-06-01',types:'Q',notes:''});save();draw()}
+function repop(){S.ms.forEach(m=>delete m.wtwO);save();draw()}
+function csv(){const r=[['Date','Insurer','Types','Start planning','ME lead','ME support','Why','WTW attendees','Insurer attendees','Notes']];
+ S.ms.slice().sort((a,b)=>a.date.localeCompare(b.date)).forEach(m=>{const i=IB[m.ins]||[];r.push([m.date,m.ins,m.types.split('').map(t=>TN[t]).join(' + '),planStart(m),i[2],i[3],why(m),m.wtwO!==undefined?m.wtwO:wtw(m),m.insO!==undefined?m.insO:i[8],m.notes])});
+ dl('ME_Planner_2027.csv','text/csv',r.map(x=>x.map(c=>'"'+String(c==null?'':c).replace(/"/g,'""')+'"').join(',')).join('\n'))}
+function dl(n,t,c){const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([c],{type:t}));a.download=n;a.click()}
+function saveJ(){dl('ME_Planner_2027.json','application/json',JSON.stringify(S))}
+function loadJ(el){const r=new FileReader();r.onload=()=>{S=JSON.parse(r.result);save();init()};r.readAsText(el.files[0])}
+function init(){people.innerHTML=PF.map(p=>'<label>'+p[1]+': <input type="text" value="'+esc(S.people[p[0]])+'" onchange="S.people[\''+p[0].replace(/'/g,"\\'")+'\']=this.value;save();draw()"></label>').join('');
+ fi.innerHTML='<option value="">All insurers</option>'+INS.map(i=>'<option>'+esc(i[0])+'</option>').join('');draw()}
+init();
+</script></body></html>
